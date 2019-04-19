@@ -5,12 +5,13 @@ require 'ostruct'
 require 'stringio'
 
 
-SEP = '\\'  # Token delimiter
+DLM = '\\'  # Token delimiter
 DEFAULTS = {
   wordlist: 'eff_large_wordlist.txt',
   symbols: %q(!'@#$%&*-_=+/:.,";?),
-  format: "#{SEP}w #{SEP}w #{SEP}w #{SEP}w #{SEP}w"
+  format: "#{DLM}w #{DLM}w #{DLM}w #{DLM}w #{DLM}w"
 }
+
 
 def nb_lines(filename)
   File.foreach(filename).inject(0) {|acc, line| acc += 1}
@@ -18,6 +19,10 @@ end
 
 def dice_roll
   1 + SecureRandom.random_number(6)
+end
+
+
+class TokenError < RuntimeError
 end
 
 # Inherit this class to define new tokens
@@ -95,7 +100,7 @@ class PassphraseGenerator
       'w' => WordList.new(options.wordlist),
       's' => SymbolList.new(options.symbol_list),
       'd' => RandomDigit.new,
-      SEP => ConstantToken.new(SEP)
+      DLM => ConstantToken.new(DLM)
     }
   end
 
@@ -103,9 +108,9 @@ class PassphraseGenerator
     result = ''
     StringIO.open(@format) {|formatIO|
       formatIO.each_char do |char|
-        if char == SEP
-          ### TODO: handle format error
+        if char == DLM
           token = formatIO.readchar
+          raise TokenError.new("Unrecognized token: #{DLM}#{token}") if !@tokens.key?(token)
           result << @tokens[token].resolve
         else
           result << char
@@ -133,10 +138,10 @@ class CommandParser
           "Specify the format of the generated passphrase",
           "\t(default\: #{options.format})",
           "available flags are:",
-          "#{SEP}w => a word from the wordlist",
-          "#{SEP}d => a digit [0-9]",
-          "#{SEP}s => a symbol from the string SYMBOLS",
-          "Example: 'pass#{SEP}d#{SEP}d#{SEP}d_#{SEP}w #{SEP}w #{SEP}w'") do |format|
+          "#{DLM}w => a word from the wordlist",
+          "#{DLM}d => a digit [0-9]",
+          "#{DLM}s => a symbol from the string SYMBOLS",
+          "Example: 'pass#{DLM}d#{DLM}d#{DLM}d_#{DLM}w #{DLM}w #{DLM}w'") do |format|
         options.format = format
       end
 
@@ -163,4 +168,9 @@ class CommandParser
 end
 
 options = CommandParser.parse(ARGV)
-puts PassphraseGenerator.new(options).generate
+begin
+  puts PassphraseGenerator.new(options).generate
+rescue TokenError => e
+  puts "ERROR: #{e.message}"
+  puts "See --help for supported format flags."
+end
