@@ -28,7 +28,7 @@ end
 
 # Inherit this class to define new tokens
 class Token
-  def resolve
+  def replace
     # Default behaviour is to pick a random element from the subclass
     pick_random
   end
@@ -39,7 +39,7 @@ class ConstantToken < Token
     @value = value
   end
 
-  def resolve
+  def replace
     @value.to_s
   end
 end
@@ -109,10 +109,13 @@ class PassphraseGenerator
     result = ''
     StringIO.open(@format) {|formatIO|
       formatIO.each_char do |char|
+        # look for token delimiters in the format string
         if char == DLM
           token = formatIO.readchar
-          raise TokenError.new("Unrecognized token: #{DLM}#{token}") if !@tokens.key?(token)
-          result << @tokens[token].resolve
+          # Raise an error if the token is not supported
+          raise TokenError.new("Unrecognized token: #{DLM}#{token}\n"\
+              "See --help for supported format flags.") if !@tokens.key?(token)
+          result << @tokens[token].replace
         else
           result << char
         end
@@ -182,5 +185,4 @@ begin
   end
 rescue TokenError => e
   puts "ERROR: #{e.message}"
-  puts "See --help for supported format flags."
 end
