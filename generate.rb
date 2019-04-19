@@ -1,9 +1,11 @@
+#!/usr/bin/env ruby
 require 'securerandom'
 require 'optparse'
 require 'ostruct'
 require 'stringio'
 
-SEP = '\\'
+
+SEP = '\\'  # Token delimiter
 DEFAULTS = {
   wordlist: 'eff_large_wordlist.txt',
   symbols: %q(!'@#$%&*-_=+/:.,";?),
@@ -14,8 +16,14 @@ def nb_lines(filename)
   File.foreach(filename).inject(0) {|acc, line| acc += 1}
 end
 
+def dice_roll
+  1 + SecureRandom.random_number(6)
+end
+
+# Inherit this class to define new tokens
 class Token
   def resolve
+    # Default behaviour is to pick a random element from the subclass
     pick_random
   end
 end
@@ -28,10 +36,6 @@ class ConstantToken < Token
   def resolve
     @value.to_s
   end
-end
-
-def dice_roll
-  1 + SecureRandom.random_number(6)
 end
 
 class RandomDigit < Token
@@ -64,6 +68,7 @@ class WordList < Token
     }
   end
 
+  # Only works with dice based wordlist
   def pick_random_with_dice
     result = ''
     File.open(@wordlist, 'r') {|file|
@@ -74,6 +79,7 @@ class WordList < Token
       end
 
       file.each do |line|
+        # match the line with the rolled number
         result = line.split("\t")[1].strip if line[0..4] == dice_result
       end
     }
@@ -84,6 +90,7 @@ end
 class PassphraseGenerator
   def initialize(options)
     @format = options.format
+    # Change this to support more tokens
     @tokens = {
       'w' => WordList.new(options.wordlist),
       's' => SymbolList.new(options.symbol_list),
@@ -96,9 +103,8 @@ class PassphraseGenerator
     result = ''
     StringIO.open(@format) {|formatIO|
       formatIO.each_char do |char|
-        if char == '\\'
+        if char == SEP
           ### TODO: handle format error
-          # Consume the next character
           token = formatIO.readchar
           result << @tokens[token].resolve
         else
@@ -121,29 +127,28 @@ class CommandParser
 
     opt_parser = OptionParser.new {|opts|
       opts.banner = "Usage: #{File.basename($0)} [options]"
+      opts.separator ""
 
-      #opts.separator ""
-      #opts.separator "Specific options:"
-
-      # Mandatory argument.
       opts.on("-F", "--format FORMAT",
           "Specify the format of the generated passphrase",
-          "\tdefault\: #{options.format}",
+          "\t(default\: #{options.format})",
           "available flags are:",
           "#{SEP}w => a word from the wordlist",
           "#{SEP}d => a digit [0-9]",
-          "#{SEP}s => a symbol from the string SYMBOLS") do |format|
+          "#{SEP}s => a symbol from the string SYMBOLS",
+          "Example: 'pass#{SEP}d#{SEP}d#{SEP}d_#{SEP}w #{SEP}w #{SEP}w'") do |format|
         options.format = format
       end
 
       opts.on("-W", "--wordlist PATH/TO/WORDLIST",
-          "Pick words from the specified wordlist") do |list|
+          "Pick words from the specified wordlist",
+          "\t(default\: #{options.wordlist})") do |list|
         options.wordlist = list
       end
 
       opts.on("-s", "--symbols SYMBOLS",
           "Specify a string of symbols to pick from",
-          "\tdefault\: #{options.symbol_list}") do |list|
+          "\t(default\: #{options.symbol_list})") do |list|
         options.symbol_list = list
       end
 
