@@ -9,7 +9,8 @@ DLM = '\\'  # Token delimiter
 DEFAULTS = {
   wordlist: 'eff_large_wordlist.txt',
   symbols: %q(!'@#$%&*-_=+/:.,";?),
-  format: "#{DLM}w #{DLM}w #{DLM}w #{DLM}w #{DLM}w"
+  format: "#{DLM}w #{DLM}w #{DLM}w #{DLM}w #{DLM}w #{DLM}w",
+  count: 1
 }
 
 
@@ -127,12 +128,14 @@ class CommandParser
     options.format      = DEFAULTS[:format]
     options.wordlist    = DEFAULTS[:wordlist]
     options.symbol_list = DEFAULTS[:symbols]
+    options.count       = DEFAULTS[:count]
 
     puts "WARNING: No options provided! Using default parameters.\nSee --help for more information.\n\n" if ARGV.empty?
 
     opt_parser = OptionParser.new {|opts|
       opts.banner = "Usage: #{File.basename($0)} [options]"
       opts.separator ""
+      opts.separator "Options:"
 
       opts.on("-F", "--format FORMAT",
           "Specify the format of the generated passphrase",
@@ -145,7 +148,7 @@ class CommandParser
         options.format = format
       end
 
-      opts.on("-W", "--wordlist PATH/TO/WORDLIST",
+      opts.on("-w", "--wordlist PATH/TO/WORDLIST",
           "Pick words from the specified wordlist",
           "\t(default\: #{options.wordlist})") do |list|
         options.wordlist = list
@@ -155,6 +158,11 @@ class CommandParser
           "Specify a string of symbols to pick from",
           "\t(default\: #{options.symbol_list})") do |list|
         options.symbol_list = list
+      end
+
+      opts.on("-c", "--count N",
+          "Number of passphrases to generate") do |count|
+        options.count = count.to_i
       end
 
       opts.on_tail("-h", "--help", "Show this message") do
@@ -169,7 +177,9 @@ end
 
 options = CommandParser.parse(ARGV)
 begin
-  puts PassphraseGenerator.new(options).generate
+  options.count.times do
+    puts PassphraseGenerator.new(options).generate
+  end
 rescue TokenError => e
   puts "ERROR: #{e.message}"
   puts "See --help for supported format flags."
