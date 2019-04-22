@@ -34,6 +34,7 @@ class Token
   end
 end
 
+# A token that is replaced by a constant string, for literal values or escaping
 class ConstantToken < Token
   def initialize(value)
     @value = value
@@ -74,7 +75,7 @@ class WordList < Token
     }
   end
 
-  # Only works with dice based wordlist
+  # Only works with a dice based wordlist
   def pick_random_with_dice
     result = ''
     File.open(@wordlist, 'r') {|file|
@@ -133,7 +134,8 @@ class CommandParser
     options.symbol_list = DEFAULTS[:symbols]
     options.count       = DEFAULTS[:count]
 
-    puts "WARNING: No options provided! Using default parameters.\nSee --help for more information.\n\n" if ARGV.empty?
+    puts "WARNING: No options provided! Using default parameters.\n"\
+      "See --help for more information.\n\n" if ARGV.empty?
 
     opt_parser = OptionParser.new {|opts|
       opts.banner = "Usage: #{File.basename($0)} [options]"
@@ -180,8 +182,10 @@ end
 
 options = CommandParser.parse(ARGV)
 begin
+  generator = PassphraseGenerator.new(options)
+  # Generate <count> passphrases
   options.count.times do
-    puts PassphraseGenerator.new(options).generate
+    puts generator.generate
   end
 rescue TokenError => e
   puts "ERROR: #{e.message}"
