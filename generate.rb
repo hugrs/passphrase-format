@@ -5,14 +5,18 @@ require 'ostruct'
 require 'stringio'
 
 
-DLM = '\\'  # Token delimiter
+DLM = '/'  # Token delimiter
 DEFAULTS = {
   wordlist: 'eff_large_wordlist.txt',
-  symbols: %q(!'@#$%&*-_=+/:.,";?),
+  symbols: %q(!'@#$%&*-_=+/:.,";?~),
   format: "#{DLM}w #{DLM}w #{DLM}w #{DLM}w #{DLM}w #{DLM}w",
   count: 1
 }
 
+# https://stackoverflow.com/questions/14551256/ruby-how-to-find-out-if-a-character-is-a-letter-or-a-digit
+def numeric?(lookAhead)
+  lookAhead =~ /[[:digit:]]/
+end
 
 def nb_lines(filename)
   File.foreach(filename).reduce(0) {|acc, line| acc += 1}
@@ -111,33 +115,31 @@ end
 class PassphraseGenerator
   def initialize(options)
     @format = options.format
+
     # Change this to support more tokens
     @tokens = {
       'w' => WordList.new(options.wordlist),
       's' => SymbolList.new(options.symbol_list),
       'd' => RandomDigit.new,
-      'a' => AnyChar.new(options.symbol_list),
-      DLM => ConstantToken.new(DLM)
+      'a' => AnyChar.new(options.symbol_list)
     }
+    @supported_tokens = @tokens.keys.join
+
+    # Replace all "*n" in format string
+    preprocessing = /(\/[#{@supported_tokens}])\*(\d+)/
+    while @format.match(preprocessing) {|m|
+        # Replace from <beginning of match> to <end of match>
+        # with the token copied n times
+        @format[m.begin(0) ... m.end(0)] = m[1] * m[2].to_i
+      }
+    end
   end
 
   def generate
-    result = ''
-    StringIO.open(@format) {|formatIO|
-      formatIO.each_char do |char|
-        # look for token delimiters in the format string
-        if char == DLM
-          token = formatIO.readchar
-          # Raise an error if the token is not supported
-          raise TokenError.new("Unrecognized token: #{DLM}#{token}\n"\
-              "See --help for supported format flags.") if !@tokens.key?(token)
-          result << @tokens[token].replace
-        else
-          result << char
-        end
-      end
+    # Replace all tokens in the format with their random value
+    @format.gsub(/\/[#{@supported_tokens}]/) {|m|
+      @tokens[m[1]].replace
     }
-    result
   end
 end
 
