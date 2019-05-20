@@ -15,7 +15,7 @@ DEFAULTS = {
 
 
 def nb_lines(filename)
-  File.foreach(filename).inject(0) {|acc, line| acc += 1}
+  File.foreach(filename).reduce(0) {|acc, line| acc += 1}
 end
 
 def dice_roll
@@ -61,6 +61,20 @@ class SymbolList < Token
   end
 end
 
+class AnyChar < Token
+  def initialize(symbols)
+    # generate string of digits 0 to 9
+    digits = ('0'..'9').to_a
+    lower = ('a'..'z').to_a
+    upper = ('A'..'Z').to_a
+    @full_list = [digits,lower,upper,symbols.chars].reduce([], :concat)
+  end
+
+  def pick_random
+    @full_list[SecureRandom.random_number(@full_list.length)]
+  end
+end
+
 class WordList < Token
   def initialize(wordlist)
     @wordlist = wordlist
@@ -102,6 +116,7 @@ class PassphraseGenerator
       'w' => WordList.new(options.wordlist),
       's' => SymbolList.new(options.symbol_list),
       'd' => RandomDigit.new,
+      'a' => AnyChar.new(options.symbol_list),
       DLM => ConstantToken.new(DLM)
     }
   end
