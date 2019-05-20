@@ -9,7 +9,7 @@ DLM = '/'  # Token delimiter
 DEFAULTS = {
   wordlist: 'eff_large_wordlist.txt',
   symbols: %q(!'@#$%&*-_=+/:.,";?~),
-  format: "#{DLM}w #{DLM}w #{DLM}w #{DLM}w #{DLM}w #{DLM}w",
+  format: "(#{DLM}w )*6",
   count: 1
 }
 
@@ -126,18 +126,22 @@ class PassphraseGenerator
     @supported_tokens = @tokens.keys.join
 
     # Replace all "*n" in format string
-    preprocessing = /(\/[#{@supported_tokens}])\*(\d+)/
+    preprocessing = /(#{DLM}\w|\([#{DLM}\w\s]*\))\*(\d+)/
     while @format.match(preprocessing) {|m|
+        context = m[1].to_s
+        if context[0] == '(' && context[-1] == ')'
+          context = context.slice(1 ... -1)
+        end
         # Replace from <beginning of match> to <end of match>
         # with the token copied n times
-        @format[m.begin(0) ... m.end(0)] = m[1] * m[2].to_i
+        @format[m.begin(0) ... m.end(0)] = context * m[2].to_i
       }
     end
   end
 
   def generate
     # Replace all tokens in the format with their random value
-    @format.gsub(/\/[#{@supported_tokens}]/) {|m|
+    @format.gsub(/#{DLM}[#{@supported_tokens}]/) {|m|
       @tokens[m[1]].replace
     }
   end
