@@ -18,7 +18,8 @@ def numeric?(lookAhead)
   lookAhead =~ /[[:digit:]]/
 end
 
-def nb_lines(filename)
+# https://stackoverflow.com/questions/2650517/count-the-number-of-lines-in-a-file-without-reading-entire-file-into-memory
+def file_nb_lines(filename)
   File.foreach(filename).reduce(0) {|acc, line| acc += 1}
 end
 
@@ -26,188 +27,107 @@ def dice_roll
   1 + SecureRandom.random_number(6)
 end
 
-
-class TokenError < RuntimeError
+def pick_random_word(wordlist)
+  File.open(wordlist, 'r') {|file|
+    # Pick a random number N then read N lines from the file
+    SecureRandom.random_number(file_nb_lines wordlist).times { file.readline }
+    # Return the next line
+    file.readline.split("\t")[1].strip
+  }
 end
 
-# Inherit this class to define new tokens
-class Token
-  def replace
-    # Default behaviour is to pick a random element from the subclass
-    pick_random
-  end
+def random_element_in_array(array)
+  array[SecureRandom.random_number(array.length)]
 end
 
-# A token that is replaced by a constant string, for literal values or escaping
-class ConstantToken < Token
-  def initialize(value)
-    @value = value
-  end
+def parse_command_line(args)
+  options = OpenStruct.new
+  options.format      = DEFAULTS[:format]
+  options.wordlist    = DEFAULTS[:wordlist]
+  options.symbols     = DEFAULTS[:symbols]
+  options.count       = DEFAULTS[:count]
 
-  def replace
-    @value.to_s
-  end
-end
+  puts "WARNING: No options provided! Using default parameters.\n"\
+    "See --help for more information.\n\n" if args.empty?
 
-class RandomDigit < Token
-  def pick_random
-    SecureRandom.random_number(10).to_s
-  end
-end
+  opt_parser = OptionParser.new {|opts|
+    opts.banner = "Usage: #{File.basename($0)} [options]"
+    opts.separator ""
+    opts.separator "Options:"
 
-class SymbolList < Token
-  def initialize(list)
-    @symbol_list = list
-  end
-
-  def pick_random
-    @symbol_list[SecureRandom.random_number(@symbol_list.length)]
-  end
-end
-
-class AnyChar < Token
-  def initialize(symbols)
-    # generate string of digits 0 to 9
-    digits = ('0'..'9').to_a
-    lower = ('a'..'z').to_a
-    upper = ('A'..'Z').to_a
-    @full_list = [digits,lower,upper,symbols.chars].reduce([], :concat)
-  end
-
-  def pick_random
-    @full_list[SecureRandom.random_number(@full_list.length)]
-  end
-end
-
-class WordList < Token
-  def initialize(wordlist)
-    @wordlist = wordlist
-  end
-
-  def pick_random
-    File.open(@wordlist, 'r') {|file|
-      # Pick a random number N then read N lines from the file
-      SecureRandom.random_number(nb_lines @wordlist).times { file.readline }
-      # Return the next line
-      file.readline.split("\t")[1].strip
-    }
-  end
-
-  # Only works with a dice based wordlist
-  def pick_random_with_dice
-    result = ''
-    File.open(@wordlist, 'r') {|file|
-      # Roll the dices!
-      dice_result = ''
-      5.times do
-        dice_result << dice_roll.to_s
-      end
-
-      file.each do |line|
-        # match the line with the rolled number
-        result = line.split("\t")[1].strip if line[0..4] == dice_result
-      end
-    }
-    result
-  end
-end
-
-class PassphraseGenerator
-  def initialize(options)
-    @format = options.format
-
-    # Change this to support more tokens
-    @tokens = {
-      'w' => WordList.new(options.wordlist),
-      's' => SymbolList.new(options.symbol_list),
-      'd' => RandomDigit.new,
-      'a' => AnyChar.new(options.symbol_list)
-    }
-    @supported_tokens = @tokens.keys.join
-
-    # Replace all "*n" in format string
-    preprocessing = /(#{DLM}\w|\([#{DLM}\w\s]*\))\*(\d+)/
-    while @format.match(preprocessing) {|m|
-        context = m[1].to_s
-        if context[0] == '(' && context[-1] == ')'
-          context = context.slice(1 ... -1)
-        end
-        # Replace from <beginning of match> to <end of match>
-        # with the token copied n times
-        @format[m.begin(0) ... m.end(0)] = context * m[2].to_i
-      }
+    opts.on("-F FORMAT",
+        "Specify the format of the generated passphrase",
+        "\t(default\: #{options.format})",
+        "available flags are:",
+        "#{DLM}w => a word from the wordlist",
+        "#{DLM}d => a digit [0-9]",
+        "#{DLM}s => a symbol from the string SYMBOLS",
+        "#{DLM}c => a random character (letter, digit or symbol)",
+        "Example: 'pass#{DLM}d#{DLM}d#{DLM}d_#{DLM}w #{DLM}w #{DLM}w'") do |format|
+      options.format = format
     end
-  end
 
-  def generate
-    # Replace all tokens in the format with their random value
-    @format.gsub(/#{DLM}[#{@supported_tokens}]/) {|m|
-      @tokens[m[1]].replace
-    }
-  end
+    opts.on("-w PATH\/TO\/WORDLIST",
+        "Pick words from the specified wordlist",
+        "\t(default\: #{options.wordlist})") do |list|
+      options.wordlist = list
+    end
+
+    opts.on("-s SYMBOLS",
+        "Specify a string of symbols to pick from",
+        "\t(default\: #{options.symbols})") do |list|
+      options.symbols = list
+    end
+
+    opts.on("-c N",
+        "Number of passphrases to generate") do |count|
+      options.count = count.to_i
+    end
+
+    opts.on_tail("-h", "--help", "Show this message") do
+      puts opts
+      exit
+    end
+  }
+  opt_parser.parse!(args)
+  options
 end
 
-class CommandParser
-  def self.parse(args)
-    options = OpenStruct.new
-    options.format      = DEFAULTS[:format]
-    options.wordlist    = DEFAULTS[:wordlist]
-    options.symbol_list = DEFAULTS[:symbols]
-    options.count       = DEFAULTS[:count]
 
-    puts "WARNING: No options provided! Using default parameters.\n"\
-      "See --help for more information.\n\n" if ARGV.empty?
+options = parse_command_line(ARGV)
+format = options.format
+tokens = {
+  'w' => lambda { pick_random_word(options.wordlist) },
+  's' => lambda { random_element_in_array(options.symbols) },
+  'd' => lambda { SecureRandom.random_number(10).to_s },
+  'c' => lambda {
+    # Concat digits, letters and symbols into a single array
+    full_list = [('0'..'9').to_a, ('a'..'z').to_a, ('A'..'Z').to_a, options.symbols.chars].reduce([], :concat)
+    random_element_in_array(full_list)
+  }
+}
 
-    opt_parser = OptionParser.new {|opts|
-      opts.banner = "Usage: #{File.basename($0)} [options]"
-      opts.separator ""
-      opts.separator "Options:"
-
-      opts.on("-F", "--format FORMAT",
-          "Specify the format of the generated passphrase",
-          "\t(default\: #{options.format})",
-          "available flags are:",
-          "#{DLM}w => a word from the wordlist",
-          "#{DLM}d => a digit [0-9]",
-          "#{DLM}s => a symbol from the string SYMBOLS",
-          "Example: 'pass#{DLM}d#{DLM}d#{DLM}d_#{DLM}w #{DLM}w #{DLM}w'") do |format|
-        options.format = format
-      end
-
-      opts.on("-w", "--wordlist PATH/TO/WORDLIST",
-          "Pick words from the specified wordlist",
-          "\t(default\: #{options.wordlist})") do |list|
-        options.wordlist = list
-      end
-
-      opts.on("-s", "--symbols SYMBOLS",
-          "Specify a string of symbols to pick from",
-          "\t(default\: #{options.symbol_list})") do |list|
-        options.symbol_list = list
-      end
-
-      opts.on("-c", "--count N",
-          "Number of passphrases to generate") do |count|
-        options.count = count.to_i
-      end
-
-      opts.on_tail("-h", "--help", "Show this message") do
-        puts opts
-        exit
-      end
-    }
-    opt_parser.parse!(args)
-    options
-  end
+# Replace all "*n" in format string
+# example: '(/w)*3' => '/w/w/w'
+preprocessing = /(#{DLM}\w|\([#{DLM}\w\s]*\))\*(\d+)/
+while format.match(preprocessing) {|m|
+    match = m[1].to_s
+    # strip surrounding parentheses
+    if match[0] == '(' && match[-1] == ')'
+      match = match.slice(1 ... -1)
+    end
+    # Replace from <beginning of match> to <end of match>
+    # with the token copied n times
+    format[m.begin(0) ... m.end(0)] = match * m[2].to_i
+  }
 end
 
-options = CommandParser.parse(ARGV)
-begin
-  generator = PassphraseGenerator.new(options)
-  # Generate <count> passphrases
-  options.count.times do
-    puts generator.generate
-  end
-rescue TokenError => e
-  puts "ERROR: #{e.message}"
+# Generate <count> passphrases
+options.count.times do
+  token_regex = /#{DLM}[#{tokens.keys.join}]/
+  # Replace all tokens in the format string with their random value
+  # and display the result
+  puts format.gsub(token_regex) {|m|
+    tokens[m[1]].call
+  }
 end
