@@ -1,29 +1,39 @@
 # passphrase-format
 
-    Usage: generate.rb [options]
-    
-    Options:
-        -F, --format FORMAT              Specify the format of the generated passphrase
-                                         	(default: \w \w \w \w \w \w)
-                                         available flags are:
-                                         \w => a word from the wordlist
-                                         \d => a digit [0-9]
-                                         \s => a symbol from the string SYMBOLS
-                                         Example: 'pass\d\d\d_\w \w \w'
-        -w, --wordlist PATH/TO/WORDLIST  Pick words from the specified wordlist
-                                         	(default: eff_large_wordlist.txt)
-        -s, --symbols SYMBOLS            Specify a string of symbols to pick from
-                                         	(default: !'@#$%&*-_=+/:.,";?)
-        -c, --count N                    Number of passphrases to generate
-        -h, --help                       Show this message
+```
+Usage: generate.rb [options]
 
-This tool generates passphrases based on a format string, similar to printf syntax.
+Options:
+    -F FORMAT                        Specify the format of the generated passphrase
+                                     	(default: (/w )*6)
+                                     available flags are:
+                                     /w => a word from the wordlist
+                                     /d => a digit [0-9]
+                                     /s => a symbol from the string SYMBOLS
+                                     /c => a random character (letter, digit or symbol)
+                                     Example: 'pass/d/d/d_/w /w /w'
+    -w PATH/TO/WORDLIST              Pick words from the specified wordlist
+                                     	(default: eff_large_wordlist.txt)
+    -s SYMBOLS                       Specify a string of symbols to pick from
+                                     	(default: !'@#$%&*-_=+/:.,";?~)
+    -c N                             Number of passphrases to generate
+    -h, --help                       Show this message
+```
+
+This tool generates passphrases based on a format string, similar to the printf syntax.
 
 Examples:
+```
+./generate.rb -F '\w \w \w \w \w \w'
+pancake salute ducky corral uncloak graded
+```
 
-    $./generate.rb -F '\w \w \w \w \w \w'
-    pancake salute ducky corral uncloak graded
+```
+./generate.rb -F '(/w/s )*4'
+creasing% emoticon& humped" overrun& 
+```
 
-    $./generate.rb -F '\w\d\s\w\d\s\w\d\s'
-    subzero6!upheaval3@faculty0?
-
+```
+./generate.rb -F '/d*10'   
+4276471160
+```
