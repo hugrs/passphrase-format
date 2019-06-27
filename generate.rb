@@ -13,18 +13,9 @@ DEFAULTS = {
   count: 1
 }
 
-# https://stackoverflow.com/questions/14551256/ruby-how-to-find-out-if-a-character-is-a-letter-or-a-digit
-def numeric?(lookAhead)
-  lookAhead =~ /[[:digit:]]/
-end
-
 # https://stackoverflow.com/questions/2650517/count-the-number-of-lines-in-a-file-without-reading-entire-file-into-memory
 def file_nb_lines(filename)
   File.foreach(filename).reduce(0) {|acc, line| acc += 1}
-end
-
-def dice_roll
-  1 + SecureRandom.random_number(6)
 end
 
 def pick_random_word(wordlist)
