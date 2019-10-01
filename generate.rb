@@ -51,12 +51,13 @@ def parse_command_line(args)
 
     opts.on("-F FORMAT",
         "Specify the format of the generated passphrase",
-        "\t(default\: #{options.format})",
+        "\t(default\: '#{options.format}')",
         "available flags are:",
         "#{DLM}w => a word from the wordlist",
         "#{DLM}d => a digit [0-9]",
         "#{DLM}s => a symbol from the string SYMBOLS",
-        "#{DLM}c => a random character (letter, digit or symbol)",
+        "#{DLM}S => a symbol or a digit",
+        "#{DLM}a => a random character (letter, digit or symbol)",
         "Example: 'pass#{DLM}d#{DLM}d#{DLM}d_#{DLM}w #{DLM}w #{DLM}w'") do |format|
       options.format = format
     end
@@ -92,9 +93,13 @@ options = parse_command_line(ARGV)
 format = options.format
 tokens = {
   'w' => lambda { pick_random_word(options.wordlist) },
-  's' => lambda { random_element_in_array(options.symbols) },
   'd' => lambda { SecureRandom.random_number(10).to_s },
-  'c' => lambda {
+  's' => lambda { random_element_in_array(options.symbols) },
+  'S' => lambda {
+    full_list = ('0'..'9').to_a + options.symbols.chars
+    random_element_in_array(full_list)
+  },
+  'a' => lambda {
     # Concat digits, letters and symbols into a single array
     full_list = ('0'..'9').to_a + ('a'..'z').to_a + ('A'..'Z').to_a + options.symbols.chars
     random_element_in_array(full_list)

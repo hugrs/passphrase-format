@@ -5,12 +5,13 @@ Usage: generate.rb [options]
 
 Options:
     -F FORMAT                        Specify the format of the generated passphrase
-                                     	(default: (/w )*6)
+                                     	(default: '(/w )*6)'
                                      available flags are:
                                      /w => a word from the wordlist
                                      /d => a digit [0-9]
                                      /s => a symbol from the string SYMBOLS
-                                     /c => a random character (letter, digit or symbol)
+                                     /S => a symbol or a digit
+                                     /a => a random character (letter, digit or symbol)
                                      Example: 'pass/d/d/d_/w /w /w'
     -w PATH/TO/WORDLIST              Pick words from the specified wordlist
                                      	(default: eff_large_wordlist.txt)
@@ -24,13 +25,13 @@ This tool generates passphrases based on a format string, similar to the printf 
 
 Examples:
 ```
-./generate.rb -F '\w \w \w \w \w \w'
+./generate.rb -F '/w /w /w /w /w /w'
 pancake salute ducky corral uncloak graded
 ```
 
 ```
 ./generate.rb -F '(/w/s )*4'
-creasing% emoticon& humped" overrun& 
+creasing% emoticon& humped" overrun&
 ```
 
 ```
