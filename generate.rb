@@ -21,7 +21,8 @@ end
 def pick_random_word(wordlist)
   File.open(wordlist, 'r') {|file|
     # Pick a random number N then read N lines from the file
-    SecureRandom.random_number(file_nb_lines wordlist).times { file.readline }
+    random_index = SecureRandom.random_number(file_nb_lines wordlist)
+    random_index.times { file.readline }
     # Return the next line
     file.readline.split("\t")[1].strip
   }
@@ -38,8 +39,10 @@ def parse_command_line(args)
   options.symbols     = DEFAULTS[:symbols]
   options.count       = DEFAULTS[:count]
 
-  puts "WARNING: No options provided! Using default parameters.\n"\
-    "See --help for more information.\n\n" if args.empty?
+  if args.empty?
+    puts "WARNING: No options provided! Using default parameters.\n"\
+      "See --help for more information.\n\n"
+  end
 
   opt_parser = OptionParser.new {|opts|
     opts.banner = "Usage: #{File.basename($0)} [options]"
@@ -93,7 +96,7 @@ tokens = {
   'd' => lambda { SecureRandom.random_number(10).to_s },
   'c' => lambda {
     # Concat digits, letters and symbols into a single array
-    full_list = [('0'..'9').to_a, ('a'..'z').to_a, ('A'..'Z').to_a, options.symbols.chars].reduce([], :concat)
+    full_list = ('0'..'9').to_a + ('a'..'z').to_a + ('A'..'Z').to_a + options.symbols.chars
     random_element_in_array(full_list)
   }
 }
@@ -102,15 +105,15 @@ tokens = {
 # example: '(/w)*3' => '/w/w/w'
 preprocessing = /(#{DLM}\w|\([#{DLM}\w\s]*\))\*(\d+)/
 while format.match(preprocessing) {|m|
-    match = m[1].to_s
-    # strip surrounding parentheses
-    if match[0] == '(' && match[-1] == ')'
-      match = match.slice(1 ... -1)
-    end
-    # Replace from <beginning of match> to <end of match>
-    # with the token copied n times
-    format[m.begin(0) ... m.end(0)] = match * m[2].to_i
-  }
+  match = m[1].to_s
+  # strip surrounding parentheses
+  if match[0] == '(' && match[-1] == ')'
+    match = match.slice(1 ... -1)
+  end
+  # Replace from <beginning of match> to <end of match>
+  # with the token copied n times
+  format[m.begin(0) ... m.end(0)] = match * m[2].to_i
+}
 end
 
 # Generate <count> passphrases
