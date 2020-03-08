@@ -34,43 +34,40 @@ end
 
 def parse_command_line(args)
   options = OpenStruct.new
-  options.format      = DEFAULTS[:format]
-  options.wordlist    = DEFAULTS[:wordlist]
-  options.symbols     = DEFAULTS[:symbols]
-  options.count       = DEFAULTS[:count]
-
-  if args.empty?
-    puts "WARNING: No options provided! Using default parameters.\n"\
-      "See --help for more information.\n\n"
-  end
+  options.format   = DEFAULTS[:format]
+  options.wordlist = DEFAULTS[:wordlist]
+  options.symbols  = DEFAULTS[:symbols]
+  options.count    = DEFAULTS[:count]
 
   opt_parser = OptionParser.new {|opts|
-    opts.banner = "Usage: #{File.basename($0)} [options]"
+    opts.banner = <<~DOCBANNER
+      Usage: #{File.basename($0)} [options] <format>
+
+      <format>: Specify the format of the generated passphrase (default\: "#{options.format}")
+      Available tokens are:
+        #{DLM}w => a word from the wordlist
+        #{DLM}d => a digit [0-9]
+        #{DLM}s => a symbol from the string SYMBOLS
+        #{DLM}S => a symbol or a digit
+        #{DLM}a => a random character (letter digit or symbol)
+      Example: "pass#{DLM}d#{DLM}d#{DLM}d_#{DLM}w" yields "pass107_recopy"
+
+      Tokens or groups of tokens can be repeated using the syntax ()*N 
+      where N is the amount of repetitions.
+      Example: "(#{DLM}w#{DLM}d)*3" yields "faster4employer0rectified3"
+    DOCBANNER
     opts.separator ""
     opts.separator "Options:"
 
-    opts.on("-F FORMAT",
-        "Specify the format of the generated passphrase",
-        "\t(default\: '#{options.format}')",
-        "available flags are:",
-        "#{DLM}w => a word from the wordlist",
-        "#{DLM}d => a digit [0-9]",
-        "#{DLM}s => a symbol from the string SYMBOLS",
-        "#{DLM}S => a symbol or a digit",
-        "#{DLM}a => a random character (letter, digit or symbol)",
-        "Example: 'pass#{DLM}d#{DLM}d#{DLM}d_#{DLM}w #{DLM}w #{DLM}w'") do |format|
-      options.format = format
-    end
-
-    opts.on("-w PATH\/TO\/WORDLIST",
+    opts.on("-w path/to/wordlist",
         "Pick words from the specified wordlist",
-        "\t(default\: #{options.wordlist})") do |list|
+        "\t(default: #{options.wordlist})") do |list|
       options.wordlist = list
     end
 
-    opts.on("-s SYMBOLS",
+    opts.on("-s symbols",
         "Specify a string of symbols to pick from",
-        "\t(default\: #{options.symbols})") do |list|
+        "\t(default: #{options.symbols})") do |list|
       options.symbols = list
     end
 
@@ -85,6 +82,18 @@ def parse_command_line(args)
     end
   }
   opt_parser.parse!(args)
+
+  # Parse the remaining non-option arguments which should be the format string
+  if args.length == 1
+    options.format = args.last.dup
+  elsif args.empty?
+    puts "WARNING: No format provided! Using default format.\n",
+    "See --help for more information.\n\n"
+  else
+    puts opt_parser
+    exit
+  end
+
   options
 end
 
