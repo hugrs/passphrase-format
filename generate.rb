@@ -119,22 +119,22 @@ tokens = {
 # example: '(/w)*3' => '/w/w/w'
 preprocessing = /(#{DLM}\w|\([#{DLM}\w\s]*\))\*(\d+)/
 while format.match(preprocessing) {|m|
-  match = m[1].to_s
+  token = m[1].to_s
   # strip surrounding parentheses
-  if match[0] == '(' && match[-1] == ')'
-    match = match.slice(1 ... -1)
+  if token[0] == '(' && token[-1] == ')'
+    token = token.slice(1 ... -1)
   end
   # Replace from <beginning of match> to <end of match>
   # with the token copied n times
-  format[m.begin(0) ... m.end(0)] = match * m[2].to_i
+  format[m.begin(0) ... m.end(0)] = token * m[2].to_i
 }
 end
 
 # Generate <count> passphrases
 options.count.times do
-  token_regex = /#{DLM}[#{tokens.keys.join}]/
   # Replace all tokens in the format string with their random value
   # and display the result
+  token_regex = /#{DLM}[#{tokens.keys.join}]/
   puts format.gsub(token_regex) {|m|
     tokens[m[1]].call
   }
