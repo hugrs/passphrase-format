@@ -8,7 +8,7 @@ require 'stringio'
 DLM = '/'  # Token delimiter
 DEFAULTS = {
   wordlist: File.join(__dir__, 'eff_large_wordlist.txt'),
-  symbols: %q(!'@#$%&*-_=+/:.,";?~),
+  symbols: "!@#$%^&*-_=+;:'\",./<>?~",
   format: "(#{DLM}w )*6",
   count: 1
 }
