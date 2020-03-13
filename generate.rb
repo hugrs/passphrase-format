@@ -38,6 +38,7 @@ def parse_command_line(args)
   options.wordlist = DEFAULTS[:wordlist]
   options.symbols  = DEFAULTS[:symbols]
   options.count    = DEFAULTS[:count]
+  options.excluded = ""
 
   opt_parser = OptionParser.new {|opts|
     opts.banner = <<~DOCBANNER
@@ -71,6 +72,11 @@ def parse_command_line(args)
       options.symbols = list
     end
 
+    opts.on("-e symbols",
+        "Exclude one or more symbols") do |list|
+      options.excluded = list
+    end
+
     opts.on("-c N",
         "Number of passphrases to generate") do |count|
       options.count = count.to_i
@@ -100,17 +106,18 @@ end
 
 options = parse_command_line(ARGV)
 format = options.format
+symbols = options.symbols.delete(options.excluded)
 tokens = {
   'w' => lambda { pick_random_word(options.wordlist) },
   'd' => lambda { SecureRandom.random_number(10).to_s },
-  's' => lambda { random_element_in_array(options.symbols) },
+  's' => lambda { random_element_in_array(symbols) },
   'S' => lambda {
-    full_list = ('0'..'9').to_a + options.symbols.chars
+    full_list = ('0'..'9').to_a + symbols.chars
     random_element_in_array(full_list)
   },
   'a' => lambda {
     # Concat digits, letters and symbols into a single array
-    full_list = ('0'..'9').to_a + ('a'..'z').to_a + ('A'..'Z').to_a + options.symbols.chars
+    full_list = ('0'..'9').to_a + ('a'..'z').to_a + ('A'..'Z').to_a + symbols.chars
     random_element_in_array(full_list)
   }
 }
